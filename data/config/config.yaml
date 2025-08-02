@@ -1,0 +1,230 @@
+# OneForAll-Go 配置文件
+
+# 模块开关
+enable_brute_module: true
+enable_dns_resolve: true
+enable_http_request: true
+enable_takeover_check: false
+enable_finder_module: true
+enable_altdns_module: true
+enable_enrich_module: true
+
+# 新架构模块开关
+enable_search_modules: true
+enable_dns_lookup: true
+enable_resolve: true
+enable_check_modules: true
+enable_crawl_modules: true
+enable_enrich_modules: true
+
+# 搜索相关配置
+enable_recursive_search: false
+search_recursive_times: 1
+enable_full_search: true
+
+# 结果配置
+result_save_format: "csv"
+result_save_path: "results"
+result_export_alive: true
+
+# HTTP 请求配置
+http_request_port: "80,443"
+
+# DNS 配置
+dns_resolve_timeout: 10
+dns_resolve_concurrency: 100
+
+# 暴力破解配置
+brute_concurrency: 2000
+brute_timeout: 300
+
+# 域名验证配置
+enable_domain_validation: true
+validation_concurrency: 50
+validation_timeout: 30
+exclude_private_ip: true
+export_alive_only: true  # 只导出存活域名
+enable_tcp_validation: true
+tcp_validation_ports: [80, 443, 8080, 8443]
+
+# 多线程控制配置
+multi_threading:
+  # 步骤控制
+  enable_step_execution: true
+  
+  # 各步骤并发数
+  fast_search_concurrency: 10
+  dataset_concurrency: 20
+  certificate_concurrency: 15
+  crawl_concurrency: 10
+  dns_lookup_concurrency: 50
+  file_check_concurrency: 10
+  intelligence_concurrency: 15
+  brute_force_concurrency: 2000
+  enrich_concurrency: 20
+  
+  # 各步骤超时时间（秒）
+  fast_search_timeout: 30
+  dataset_timeout: 60
+  certificate_timeout: 45
+  crawl_timeout: 30
+  dns_lookup_timeout: 30
+  file_check_timeout: 30
+  intelligence_timeout: 45
+  brute_force_timeout: 300
+  enrich_timeout: 60
+  
+  # 步骤启用控制
+  enable_fast_search: true
+  enable_dataset: true
+  enable_certificate: true
+  enable_crawl: true
+  enable_dns_lookup: true
+  enable_file_check: true
+  enable_intelligence: true
+  enable_brute_force: true  # 默认启用爆破模块
+  enable_enrich: true
+
+# 日志配置
+log_level: "info"
+log_file: "logs/oneforall.log"
+
+# API 配置
+api_keys:
+  # 搜索引擎 API
+  github_api_token: ""
+  shodan_api_key: ""
+  fofa_api_email: ""
+  fofa_api_key: ""
+  hunter_api_key: ""
+  quake_api_key: ""
+  zoomeye_api_key: ""
+  bing_api_id: ""
+  bing_api_key: ""
+  google_api_id: ""
+  google_api_key: ""
+  
+  # 数据集 API
+  bevigil_api: ""
+  binaryedge_api: ""
+  chinaz_api: ""
+  circl_api_username: ""
+  circl_api_password: ""
+  cloudflare_api_token: ""
+  dnsdb_api_key: ""
+  fullhunt_api_key: ""
+  ipv4info_api_key: ""
+  passivedns_api_addr: ""
+  passivedns_api_token: ""
+  spyse_api_token: ""
+  
+  # 证书 API
+  racent_api_token: ""
+  
+  # 情报 API
+  riskiq_api_username: ""
+  riskiq_api_key: ""
+  threatbook_api_key: ""
+  virustotal_api_key: ""
+
+# 常见子域名列表
+common_subnames:
+  - "www"
+  - "mail"
+  - "ftp"
+  - "smtp"
+  - "pop"
+  - "m"
+  - "webmail"
+  - "pop3"
+  - "imap"
+  - "localhost"
+  - "autodiscover"
+  - "admin"
+  - "bbs"
+  - "test"
+  - "mx"
+  - "en"
+  - "us-en"
+  - "zh"
+  - "zh-cn"
+  - "email"
+  - "wap"
+  - "blog"
+  - "oa"
+  - "ns1"
+  - "ns2"
+  - "ns3"
+  - "ns4"
+  - "vpn"
+  - "www1"
+  - "www2"
+  - "www3"
+  - "mysql"
+  - "webdisk"
+  - "dev"
+  - "old"
+  - "news"
+  - "calendar"
+  - "shop"
+  - "potala"
+  - "mobile"
+  - "web"
+  - "sip"
+  - "mobilemail"
+  - "ns"
+  - "cpanel"
+  - "whm"
+  - "new"
+  - "img"
+  - "search"
+  - "support"
+  - "mail1"
+  - "mail2"
+  - "media"
+  - "files"
+  - "e"
+  - "video"
+  - "app"
+  - "secure"
+  - "my"
+  - "crm"
+  - "intranet"
+  - "portal"
+  - "demo"
+  - "api"
+  - "beta"
+  - "fax"
+  - "lyncdiscover"
+  - "dns"
+  - "images"
+  - "db"
+  - "staging"
+  - "info"
+  - "docs"
+  - "static"
+  - "download"
+  - "forum"
+  - "cms"
+  - "cdn"
+  - "wiki"
+  - "pda"
+  - "dns1"
+  - "home"
+  - "online"
+  - "sso"
+  - "lists"
+  - "webproxy"
+  - "office"
+  - "dns2"
+  - "get"
+  - "t"
+  - "gis"
+  - "proxy"
+  - "pic"
+  - "edu"
+  - "d"
+  - "cs"
+  - "cn"
+  - "store"
+  - "community" 
