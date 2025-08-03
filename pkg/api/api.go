@@ -48,10 +48,6 @@ type Options struct {
 	// 日志配置
 	Debug   bool `json:"debug"`   // 调试模式
 	Verbose bool `json:"verbose"` // 详细日志
-
-	// 输出配置
-	OutputFormat string `json:"output_format"` // 输出格式 (csv/json/txt)
-	OutputPath   string `json:"output_path"`   // 输出路径
 }
 
 // Result 执行结果
@@ -80,7 +76,7 @@ func NewOneForAllAPI() *OneForAllAPI {
 	}
 }
 
-// RunSubdomainEnumeration 运行子域名枚举
+// RunSubdomainEnumeration 运行子域名枚举（仅返回数据结构，不保存到本地）
 func (api *OneForAllAPI) RunSubdomainEnumeration(options Options) (*Result, error) {
 	startTime := time.Now()
 
@@ -99,12 +95,6 @@ func (api *OneForAllAPI) RunSubdomainEnumeration(options Options) (*Result, erro
 	}
 	if options.Timeout <= 0 {
 		options.Timeout = 60 * time.Second
-	}
-	if options.OutputFormat == "" {
-		options.OutputFormat = "json"
-	}
-	if options.OutputPath == "" {
-		options.OutputPath = "./results"
 	}
 
 	// 配置日志
@@ -293,7 +283,5 @@ func GetDefaultOptions() Options {
 		EnableEnrichModules:       true,
 		Debug:                     false,
 		Verbose:                   false,
-		OutputFormat:              "json",
-		OutputPath:                "./results",
 	}
 }
