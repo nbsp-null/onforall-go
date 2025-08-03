@@ -26,6 +26,10 @@ func main() {
 	options.Timeout = 30 * time.Second
 	options.Debug = true
 
+	// 配置爆破模块的字典和DNS服务器URL（可选）
+	options.BruteDictionaryURL = "https://raw.githubusercontent.com/example/wordlist/main/subnames.txt"
+	options.BruteDNSServerURL = "https://raw.githubusercontent.com/example/dns-servers/main/servers.txt"
+
 	// 运行子域名枚举（仅返回数据结构，不保存到本地）
 	result, err := oneforallAPI.RunSubdomainEnumeration(options)
 	if err != nil {
@@ -189,4 +193,40 @@ func sendToExternalService(result *api.Result) {
 
 	fmt.Printf("JSON data length: %d bytes\n", len(jsonData))
 	// 这里可以添加实际的HTTP请求或其他发送逻辑
+}
+
+// 示例：使用自定义URL配置的爆破模块
+func customURLConfigExample() {
+	oneforallAPI := api.NewOneForAllAPI()
+
+	options := api.Options{
+		Target:                    "example.com",
+		EnableValidation:          true,
+		EnableBruteForce:          true,
+		Concurrency:               10,
+		Timeout:                   60 * time.Second,
+		EnableSearchModules:       true,
+		EnableDatasetModules:      true,
+		EnableCertificateModules:  true,
+		EnableCrawlModules:        false,
+		EnableCheckModules:        false,
+		EnableIntelligenceModules: false,
+		EnableEnrichModules:       true,
+		Debug:                     true,
+
+		// 配置自定义URL
+		BruteDictionaryURL: "https://raw.githubusercontent.com/example/wordlist/main/subnames.txt",
+		BruteDNSServerURL:  "https://raw.githubusercontent.com/example/dns-servers/main/servers.txt",
+	}
+
+	fmt.Printf("=== Custom URL Configuration Example ===\n")
+	fmt.Printf("Using custom dictionary URL: %s\n", options.BruteDictionaryURL)
+	fmt.Printf("Using custom DNS server URL: %s\n", options.BruteDNSServerURL)
+
+	result, err := oneforallAPI.RunSubdomainEnumeration(options)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	fmt.Printf("Custom URL config result: %d subdomains found\n", result.TotalSubdomains)
 }

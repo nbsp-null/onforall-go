@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -203,19 +204,42 @@ func (b *Brute) Run(domain string) ([]string, error) {
 func (b *Brute) initDictPaths() {
 	logger.Debugf("Initializing dictionary paths...")
 
+	// 检查是否配置了自定义字典URL
+	cfg := config.GetConfig()
+	if cfg.BruteDictionaryURL != "" {
+		logger.Infof("Using custom dictionary URL: %s", cfg.BruteDictionaryURL)
+		b.wordlist = cfg.BruteDictionaryURL
+	} else {
+		// 使用本地字典文件
+		dataDir := "data"
+		b.wordlist = filepath.Join(dataDir, "subnames.txt")
+		logger.Debugf("Using local wordlist: %s", b.wordlist)
+	}
+
+	// 检查是否配置了自定义DNS服务器URL
+	if cfg.BruteDNSServerURL != "" {
+		logger.Infof("Using custom DNS server URL: %s", cfg.BruteDNSServerURL)
+		// 这里可以添加DNS服务器URL的处理逻辑
+	} else {
+		// 使用本地DNS服务器配置
+		logger.Debugf("Using local DNS server configuration")
+	}
+
+	// 设置nextlist（目前仍使用本地文件）
 	dataDir := "data"
-	b.wordlist = filepath.Join(dataDir, "subnames.txt")
 	b.nextlist = filepath.Join(dataDir, "subnames_next.txt")
 
 	logger.Debugf("Dictionary paths set:")
 	logger.Debugf("  - Wordlist: %s", b.wordlist)
 	logger.Debugf("  - Nextlist: %s", b.nextlist)
 
-	// 检查文件是否存在
-	if _, err := os.Stat(b.wordlist); os.IsNotExist(err) {
-		logger.Errorf("Wordlist file does not exist: %s", b.wordlist)
-	} else {
-		logger.Debugf("Wordlist file exists: %s", b.wordlist)
+	// 检查本地文件是否存在（仅当使用本地文件时）
+	if !strings.HasPrefix(b.wordlist, "http") && !strings.HasPrefix(b.wordlist, "https") {
+		if _, err := os.Stat(b.wordlist); os.IsNotExist(err) {
+			logger.Errorf("Wordlist file does not exist: %s", b.wordlist)
+		} else {
+			logger.Debugf("Wordlist file exists: %s", b.wordlist)
+		}
 	}
 
 	if _, err := os.Stat(b.nextlist); os.IsNotExist(err) {
@@ -572,14 +596,28 @@ func (b *Brute) loadWordlist() ([]string, error) {
 
 	// 尝试加载主字典
 	if b.wordlist != "" {
-		file, err := os.Open(b.wordlist)
-		if err == nil {
-			defer file.Close()
-			scanner := bufio.NewScanner(file)
-			for scanner.Scan() {
-				word := strings.TrimSpace(scanner.Text())
-				if word != "" {
-					words = append(words, word)
+		// 检查是否是URL
+		if strings.HasPrefix(b.wordlist, "http") || strings.HasPrefix(b.wordlist, "https") {
+			// 从URL加载字典
+			urlWords, err := b.loadWordlistFromURL(b.wordlist)
+			if err != nil {
+				logger.Errorf("Failed to load wordlist from URL %s: %v", b.wordlist, err)
+				// 如果URL加载失败，使用默认词
+				words = b.getDefaultWords()
+			} else {
+				words = urlWords
+			}
+		} else {
+			// 从本地文件加载字典
+			file, err := os.Open(b.wordlist)
+			if err == nil {
+				defer file.Close()
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					word := strings.TrimSpace(scanner.Text())
+					if word != "" {
+						words = append(words, word)
+					}
 				}
 			}
 		}
@@ -587,13 +625,57 @@ func (b *Brute) loadWordlist() ([]string, error) {
 
 	// 如果主字典为空，使用一些默认测试词
 	if len(words) == 0 {
-		words = []string{
-			"test", "www", "mail", "ftp", "admin", "blog", "api", "dev", "stage", "prod",
-			"app", "web", "cdn", "static", "img", "css", "js", "docs", "help", "support",
-		}
+		words = b.getDefaultWords()
 	}
 
 	return words, nil
+}
+
+// loadWordlistFromURL 从URL加载字典
+func (b *Brute) loadWordlistFromURL(url string) ([]string, error) {
+	logger.Infof("Loading wordlist from URL: %s", url)
+
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// 发送HTTP请求
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch wordlist from URL: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status: %d", resp.StatusCode)
+	}
+
+	// 读取响应内容
+	scanner := bufio.NewScanner(resp.Body)
+	var words []string
+	for scanner.Scan() {
+		word := strings.TrimSpace(scanner.Text())
+		if word != "" {
+			words = append(words, word)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
+
+	logger.Infof("Successfully loaded %d words from URL: %s", len(words), url)
+	return words, nil
+}
+
+// getDefaultWords 获取默认测试词
+func (b *Brute) getDefaultWords() []string {
+	return []string{
+		"test", "www", "mail", "ftp", "admin", "blog", "api", "dev", "stage", "prod",
+		"app", "web", "cdn", "static", "img", "css", "js", "docs", "help", "support",
+	}
 }
 
 // selectRandomWords 随机选择单词

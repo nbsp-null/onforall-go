@@ -342,6 +342,27 @@ func (d *Dispatcher) RunLib(domain string, options map[string]interface{}) ([]Su
 		timeout = val
 	}
 
+	// 解析爆破模块URL配置
+	bruteDictionaryURL := ""
+	if val, ok := options["brute_dictionary_url"].(string); ok {
+		bruteDictionaryURL = val
+	}
+
+	bruteDNSServerURL := ""
+	if val, ok := options["brute_dns_server_url"].(string); ok {
+		bruteDNSServerURL = val
+	}
+
+	// 更新配置中的爆破URL
+	if bruteDictionaryURL != "" {
+		d.config.BruteDictionaryURL = bruteDictionaryURL
+		logger.Infof("Using custom brute dictionary URL: %s", bruteDictionaryURL)
+	}
+	if bruteDNSServerURL != "" {
+		d.config.BruteDNSServerURL = bruteDNSServerURL
+		logger.Infof("Using custom brute DNS server URL: %s", bruteDNSServerURL)
+	}
+
 	var allResults []SubdomainResult
 	var allSubdomains []string
 

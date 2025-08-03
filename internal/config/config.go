@@ -50,8 +50,10 @@ type Config struct {
 	DNSResolveConcurrency int `mapstructure:"dns_resolve_concurrency"`
 
 	// 爆破配置
-	BruteConcurrency int `mapstructure:"brute_concurrency"`
-	BruteTimeout     int `mapstructure:"brute_timeout"`
+	BruteConcurrency   int    `mapstructure:"brute_concurrency"`
+	BruteTimeout       int    `mapstructure:"brute_timeout"`
+	BruteDictionaryURL string `mapstructure:"brute_dictionary_url"`
+	BruteDNSServerURL  string `mapstructure:"brute_dns_server_url"`
 
 	// 域名验证配置
 	EnableDomainValidation bool  `mapstructure:"enable_domain_validation"`
@@ -192,6 +194,8 @@ func setDefaults(cfg *Config) {
 	// 爆破配置
 	cfg.BruteConcurrency = 2000
 	cfg.BruteTimeout = 300
+	cfg.BruteDictionaryURL = "" // 默认使用本地字典
+	cfg.BruteDNSServerURL = ""  // 默认使用本地DNS服务器
 
 	// 域名验证配置
 	cfg.EnableDomainValidation = true
@@ -350,6 +354,12 @@ func loadFromEnv(cfg *Config) {
 	}
 	if val := getEnvInt("BRUTE_TIMEOUT"); val != nil {
 		cfg.BruteTimeout = *val
+	}
+	if val := getEnvString("BRUTE_DICTIONARY_URL"); val != "" {
+		cfg.BruteDictionaryURL = val
+	}
+	if val := getEnvString("BRUTE_DNS_SERVER_URL"); val != "" {
+		cfg.BruteDNSServerURL = val
 	}
 
 	// 域名验证配置

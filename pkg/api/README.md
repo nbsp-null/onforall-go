@@ -68,17 +68,21 @@ type Options struct {
     Timeout     time.Duration // 超时时间
     
     // 模块开关
-    EnableSearchModules     bool // 搜索模块
-    EnableDatasetModules    bool // 数据集模块
-    EnableCertificateModules bool // 证书模块
-    EnableCrawlModules      bool // 爬虫模块
-    EnableCheckModules      bool // 检查模块
-    EnableIntelligenceModules bool // 智能模块
-    EnableEnrichModules     bool // 丰富模块
-    
+    EnableSearchModules     bool `json:"enable_search_modules"`     // 搜索模块
+    EnableDatasetModules    bool `json:"enable_dataset_modules"`    // 数据集模块
+    EnableCertificateModules bool `json:"enable_certificate_modules"` // 证书模块
+    EnableCrawlModules      bool `json:"enable_crawl_modules"`      // 爬虫模块
+    EnableCheckModules      bool `json:"enable_check_modules"`      // 检查模块
+    EnableIntelligenceModules bool `json:"enable_intelligence_modules"` // 智能模块
+    EnableEnrichModules     bool `json:"enable_enrich_modules"`     // 丰富模块
+
+    // 爆破模块配置
+    BruteDictionaryURL string `json:"brute_dictionary_url"` // 爆破字典URL
+    BruteDNSServerURL  string `json:"brute_dns_server_url"` // 爆破DNS服务器URL
+
     // 日志配置
-    Debug   bool // 调试模式
-    Verbose bool // 详细日志
+    Debug   bool `json:"debug"`   // 调试模式
+    Verbose bool `json:"verbose"` // 详细日志
 }
 ```
 
@@ -162,7 +166,33 @@ options := api.Options{
 result, err := oneforallAPI.RunSubdomainEnumeration(options)
 ```
 
-### 4. 批量处理
+### 4. 使用自定义URL配置
+
+```go
+options := api.Options{
+    Target: "example.com",
+    EnableValidation: true,
+    EnableBruteForce: true,
+    Concurrency: 10,
+    Timeout: 60 * time.Second,
+    EnableSearchModules: true,
+    EnableDatasetModules: true,
+    EnableCertificateModules: true,
+    EnableCrawlModules: false,
+    EnableCheckModules: false,
+    EnableIntelligenceModules: false,
+    EnableEnrichModules: true,
+    Debug: true,
+    
+    // 配置自定义URL
+    BruteDictionaryURL: "https://raw.githubusercontent.com/example/wordlist/main/subnames.txt",
+    BruteDNSServerURL:  "https://raw.githubusercontent.com/example/dns-servers/main/servers.txt",
+}
+
+result, err := oneforallAPI.RunSubdomainEnumeration(options)
+```
+
+### 5. 批量处理
 
 ```go
 domains := []string{"example.com", "test.org", "demo.net"}
@@ -183,7 +213,7 @@ for _, domain := range domains {
 }
 ```
 
-### 5. 结果处理示例
+### 6. 结果处理示例
 
 ```go
 result, err := oneforallAPI.RunSubdomainEnumeration(options)
@@ -219,7 +249,7 @@ if err != nil {
 sendToExternalAPI(jsonData)
 ```
 
-### 6. 发送到外部服务
+### 7. 发送到外部服务
 
 ```go
 func sendToExternalAPI(result *api.Result) {

@@ -45,6 +45,10 @@ type Options struct {
 	EnableIntelligenceModules bool `json:"enable_intelligence_modules"` // 智能模块
 	EnableEnrichModules       bool `json:"enable_enrich_modules"`       // 丰富模块
 
+	// 爆破模块配置
+	BruteDictionaryURL string `json:"brute_dictionary_url"` // 爆破字典URL
+	BruteDNSServerURL  string `json:"brute_dns_server_url"` // 爆破DNS服务器URL
+
 	// 日志配置
 	Debug   bool `json:"debug"`   // 调试模式
 	Verbose bool `json:"verbose"` // 详细日志
@@ -111,10 +115,12 @@ func (api *OneForAllAPI) RunSubdomainEnumeration(options Options) (*Result, erro
 
 	// 准备库调用选项
 	libOptions := map[string]interface{}{
-		"enable_validation":  options.EnableValidation,
-		"enable_brute_force": options.EnableBruteForce,
-		"concurrency":        options.Concurrency,
-		"timeout":            options.Timeout,
+		"enable_validation":    options.EnableValidation,
+		"enable_brute_force":   options.EnableBruteForce,
+		"concurrency":          options.Concurrency,
+		"timeout":              options.Timeout,
+		"brute_dictionary_url": options.BruteDictionaryURL,
+		"brute_dns_server_url": options.BruteDNSServerURL,
 	}
 
 	// 执行子域名枚举
@@ -281,6 +287,8 @@ func GetDefaultOptions() Options {
 		EnableCheckModules:        true,
 		EnableIntelligenceModules: true,
 		EnableEnrichModules:       true,
+		BruteDictionaryURL:        "", // 默认使用本地字典
+		BruteDNSServerURL:         "", // 默认使用本地DNS服务器
 		Debug:                     false,
 		Verbose:                   false,
 	}
