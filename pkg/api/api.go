@@ -86,7 +86,11 @@ func (api *OneForAllAPI) RunSubdomainEnumeration(options Options) (*Result, erro
 
 	// 验证必需参数
 	if options.Target == "" {
-		return nil, fmt.Errorf("target domain is required")
+		return &Result{
+			Domain:        options.Target,
+			ExecutionTime: time.Since(startTime),
+			Error:         "target domain is required",
+		}, fmt.Errorf("target domain is required")
 	}
 
 	// 设置默认值
@@ -135,19 +139,22 @@ func (api *OneForAllAPI) RunSubdomainEnumeration(options Options) (*Result, erro
 	}
 
 	// 转换结果格式
-	apiResults := make([]SubdomainResult, len(results))
-	for i, result := range results {
-		apiResults[i] = SubdomainResult{
-			Subdomain:   result.Subdomain,
-			Source:      result.Source,
-			Time:        result.Time,
-			Alive:       result.Alive,
-			IP:          result.IP,
-			DNSResolved: result.DNSResolved,
-			PingAlive:   result.PingAlive,
-			StatusCode:  result.StatusCode,
-			StatusText:  result.StatusText,
-			Provider:    result.Provider,
+	var apiResults []SubdomainResult
+	if results != nil {
+		apiResults = make([]SubdomainResult, len(results))
+		for i, result := range results {
+			apiResults[i] = SubdomainResult{
+				Subdomain:   result.Subdomain,
+				Source:      result.Source,
+				Time:        result.Time,
+				Alive:       result.Alive,
+				IP:          result.IP,
+				DNSResolved: result.DNSResolved,
+				PingAlive:   result.PingAlive,
+				StatusCode:  result.StatusCode,
+				StatusText:  result.StatusText,
+				Provider:    result.Provider,
+			}
 		}
 	}
 
