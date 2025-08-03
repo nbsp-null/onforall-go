@@ -192,8 +192,8 @@ func (d *Dispatcher) RegisterModule(module Module) {
 }
 
 // RunAllModules 运行所有模块（分步执行）
-func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, []validator.ValidationResult, error) {
-	results := make(map[ModuleType][]string)
+func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]SubdomainResult, []validator.ValidationResult, error) {
+	results := make(map[ModuleType][]SubdomainResult)
 	var allSubdomains []string
 	var validationResults []validator.ValidationResult
 
@@ -236,9 +236,19 @@ func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, []va
 			continue
 		}
 
-		// 合并结果
+		// 转换为SubdomainResult结构
 		stepType := d.getModuleTypeForStep(step.Name)
-		results[stepType] = stepResults
+		var stepResultStructs []SubdomainResult
+		for _, subdomain := range stepResults {
+			result := SubdomainResult{
+				Subdomain: subdomain,
+				Source:    string(stepType),
+				Time:      time.Now().Format("2006-01-02 15:04:05"),
+				Alive:     false, // 默认未检查存活状态
+			}
+			stepResultStructs = append(stepResultStructs, result)
+		}
+		results[stepType] = stepResultStructs
 		allSubdomains = append(allSubdomains, stepResults...)
 
 		logger.Infof("Step %s completed, found %d subdomains (Total: %d)",
@@ -275,13 +285,20 @@ func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, []va
 		// 更新所有步骤的结果，保留所有域名但标记存活状态
 		for stepType := range results {
 			// 为每个步骤的结果添加验证信息
-			var validatedResults []string
-			for _, subdomain := range results[stepType] {
+			var validatedResults []SubdomainResult
+			for _, result := range results[stepType] {
 				// 查找对应的验证结果
 				for _, validationResult := range allValidatedResults {
-					if validationResult.Subdomain == subdomain {
-						// 如果验证通过，保留域名；如果验证不通过，也保留但标记为不存活
-						validatedResults = append(validatedResults, subdomain)
+					if validationResult.Subdomain == result.Subdomain {
+						// 更新验证信息
+						result.IP = validationResult.IP
+						result.Alive = validationResult.Alive
+						result.DNSResolved = validationResult.DNSResolved
+						result.PingAlive = validationResult.PingAlive
+						result.StatusCode = validationResult.StatusCode
+						result.StatusText = validationResult.StatusText
+						result.Provider = validationResult.Provider
+						validatedResults = append(validatedResults, result)
 						break
 					}
 				}
