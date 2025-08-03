@@ -19,6 +19,7 @@ import (
 	"github.com/oneforall-go/internal/enrich"
 	"github.com/oneforall-go/internal/intelligence"
 	"github.com/oneforall-go/internal/search"
+	"github.com/oneforall-go/internal/validator"
 	"github.com/oneforall-go/pkg/logger"
 	"github.com/oneforall-go/pkg/utils"
 )
@@ -323,14 +324,14 @@ func (o *OneForAll) run() error {
 		logger.Infof("Processing domain: %s", domain)
 
 		// 运行所有模块
-		results, err := o.dispatcher.RunAllModules(domain)
+		results, validationResults, err := o.dispatcher.RunAllModules(domain)
 		if err != nil {
 			logger.Errorf("Failed to run modules for %s: %v", domain, err)
 			continue
 		}
 
 		// 处理结果
-		o.processResults(domain, results)
+		o.processResults(domain, results, validationResults)
 	}
 
 	// 导出结果
@@ -345,7 +346,14 @@ func (o *OneForAll) run() error {
 }
 
 // processResults 处理结果
-func (o *OneForAll) processResults(domain string, results map[core.ModuleType][]string) {
+func (o *OneForAll) processResults(domain string, results map[core.ModuleType][]string, validationResults []validator.ValidationResult) {
+	// 首先添加验证结果
+	if len(validationResults) > 0 {
+		logger.Infof("Adding %d validation results for %s", len(validationResults), domain)
+		o.output.AddValidationResults(validationResults)
+	}
+
+	// 然后添加其他模块的结果
 	for moduleType, subdomains := range results {
 		logger.Infof("Module type %s found %d subdomains for %s", moduleType, len(subdomains), domain)
 
@@ -464,6 +472,95 @@ var checkCmd = &cobra.Command{
 	},
 }
 
+// 创建runlib命令
+var runLibCmd = &cobra.Command{
+	Use:   "runlib",
+	Short: "Run subdomain collection as library",
+	Long:  `Run subdomain collection as library with configurable options`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		oneforall := NewOneForAll()
+
+		// 检查环境
+		if err := oneforall.check(); err != nil {
+			return err
+		}
+
+		// 运行库调用
+		return oneforall.runLib(cmd)
+	},
+}
+
+// runLib 运行库调用
+func (o *OneForAll) runLib(cmd *cobra.Command) error {
+	logger.Info("Starting OneForAll library call...")
+
+	// 配置参数
+	o.configParam()
+
+	// 加载域名
+	if err := o.loadDomains(); err != nil {
+		return err
+	}
+
+	// 注册模块
+	o.registerModules()
+
+	// 解析选项参数
+	options := make(map[string]interface{})
+
+	// 从命令行标志获取选项
+	if enableValidation, _ := cmd.Flags().GetBool("enable-validation"); enableValidation {
+		options["enable_validation"] = enableValidation
+	}
+
+	if enableBruteForce, _ := cmd.Flags().GetBool("enable-brute-force"); enableBruteForce {
+		options["enable_brute_force"] = enableBruteForce
+	}
+
+	if concurrency, _ := cmd.Flags().GetInt("concurrency"); concurrency > 0 {
+		options["concurrency"] = concurrency
+	}
+
+	if timeout, _ := cmd.Flags().GetDuration("timeout"); timeout > 0 {
+		options["timeout"] = timeout
+	}
+
+	// 处理每个域名
+	for _, domain := range o.domains {
+		logger.Infof("Processing domain: %s", domain)
+
+		// 运行库调用
+		results, err := o.dispatcher.RunLib(domain, options)
+		if err != nil {
+			logger.Errorf("Failed to run library call for %s: %v", domain, err)
+			continue
+		}
+
+		// 处理结果
+		o.processLibResults(domain, results)
+	}
+
+	// 导出结果
+	if err := o.output.Export(); err != nil {
+		return fmt.Errorf("failed to export results: %v", err)
+	}
+
+	// 显示统计信息
+	o.showStats()
+
+	return nil
+}
+
+// processLibResults 处理库调用结果
+func (o *OneForAll) processLibResults(domain string, results []core.SubdomainResult) {
+	logger.Infof("Processing %d results for domain %s", len(results), domain)
+
+	// 直接添加所有结果
+	for _, result := range results {
+		o.output.AddResult(result)
+	}
+}
+
 func init() {
 	// 加载环境变量
 	loadEnvironment()
@@ -480,7 +577,7 @@ func init() {
 	logger.Init(logLevel, "")
 
 	// 设置根命令
-	rootCmd.AddCommand(runCmd, versionCmd, checkCmd)
+	rootCmd.AddCommand(runCmd, versionCmd, checkCmd, runLibCmd)
 
 	// 设置run命令的参数
 	runCmd.Flags().StringVarP(&target, "target", "t", "", "目标域名")
@@ -505,6 +602,12 @@ func init() {
 
 	// 设置必需参数
 	runCmd.MarkFlagRequired("target")
+
+	// runLibCmd 参数
+	runLibCmd.Flags().Bool("enable-validation", true, "Enable validation results")
+	runLibCmd.Flags().Bool("enable-brute-force", false, "Enable brute force module")
+	runLibCmd.Flags().Int("concurrency", 10, "Number of concurrent requests")
+	runLibCmd.Flags().Duration("timeout", 0, "Request timeout")
 }
 
 // loadEnvironment 加载环境变量

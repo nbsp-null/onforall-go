@@ -118,10 +118,13 @@ func (v *DomainValidator) ValidateDomains(domains []string, concurrency int) []V
 			defer func() { <-semaphore }()
 
 			result := v.validateSingleDomain(domain)
+
+			// 添加所有验证结果，不管是否存活
+			mutex.Lock()
+			results = append(results, result)
+			mutex.Unlock()
+
 			if result.Alive {
-				mutex.Lock()
-				results = append(results, result)
-				mutex.Unlock()
 				logger.Debugf("Domain %s is alive (IP: %v, DNS: %v, Ping: %v, Status: %d, Provider: %s)",
 					domain, result.IP, result.DNSResolved, result.PingAlive, result.StatusCode, result.Provider)
 			} else {
@@ -137,7 +140,7 @@ func (v *DomainValidator) ValidateDomains(domains []string, concurrency int) []V
 		logger.Warnf("Some validation errors occurred: %v", errors)
 	}
 
-	logger.Infof("Domain validation completed. Found %d alive domains", len(results))
+	logger.Infof("Domain validation completed. Processed %d unique domains", len(results))
 	return results
 }
 
@@ -167,9 +170,11 @@ func (v *DomainValidator) validateSingleDomain(domain string) ValidationResult {
 	}
 
 	// 1. DNS 解析验证
-	if ips := v.resolveDomain(domain); len(ips) > 0 {
+	ips := v.resolveDomain(domain)
+	if len(ips) > 0 {
 		result.IP = ips
 		result.DNSResolved = true
+		logger.Debugf("DNS resolution successful for %s: %v", domain, ips)
 
 		// 2. Ping 验证（TCP连接测试）
 		result.PingAlive = v.validatePing(ips[0])
@@ -177,6 +182,7 @@ func (v *DomainValidator) validateSingleDomain(domain string) ValidationResult {
 			result.Alive = true
 			result.StatusCode = 200
 			result.StatusText = "Alive"
+			logger.Debugf("Ping successful for %s", domain)
 
 			// 3. IP供应商查询
 			if len(ips) > 0 {
@@ -185,11 +191,16 @@ func (v *DomainValidator) validateSingleDomain(domain string) ValidationResult {
 		} else {
 			result.StatusCode = 0
 			result.StatusText = "Ping Failed"
+			logger.Debugf("Ping failed for %s", domain)
 		}
 	} else {
 		result.StatusCode = -1
 		result.StatusText = "DNS Resolution Failed"
+		logger.Debugf("DNS resolution failed for %s", domain)
 	}
+
+	logger.Debugf("Validation result for %s: Alive=%v, DNS=%v, Ping=%v, Status=%d, Text=%s",
+		domain, result.Alive, result.DNSResolved, result.PingAlive, result.StatusCode, result.StatusText)
 
 	return result
 }

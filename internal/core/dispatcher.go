@@ -192,9 +192,10 @@ func (d *Dispatcher) RegisterModule(module Module) {
 }
 
 // RunAllModules 运行所有模块（分步执行）
-func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, error) {
+func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, []validator.ValidationResult, error) {
 	results := make(map[ModuleType][]string)
 	var allSubdomains []string
+	var validationResults []validator.ValidationResult
 
 	logger.Infof("=== Starting subdomain enumeration for domain: %s ===", domain)
 	logger.Debugf("Total execution steps: %d", len(d.executionSteps))
@@ -256,7 +257,7 @@ func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, erro
 		logger.Info("=== Starting domain validation and deduplication ===")
 
 		// 验证域名
-		validationResults := d.validator.ValidateDomains(allSubdomains, d.config.ValidationConcurrency)
+		validationResults = d.validator.ValidateDomains(allSubdomains, d.config.ValidationConcurrency)
 
 		// 保留所有结果，包括验证不通过的域名
 		var allValidatedResults []validator.ValidationResult
@@ -295,8 +296,133 @@ func (d *Dispatcher) RunAllModules(domain string) (map[ModuleType][]string, erro
 		}
 	}
 
-	logger.Infof("Final result: %d unique alive subdomains", len(allSubdomains))
-	return results, nil
+	logger.Infof("Final result: %d unique domains", len(allSubdomains))
+	return results, validationResults, nil
+}
+
+// RunLib 库调用接口，支持参数化调用并返回数据结构数组
+func (d *Dispatcher) RunLib(domain string, options map[string]interface{}) ([]SubdomainResult, error) {
+	logger.Infof("=== Starting library call for domain: %s ===", domain)
+
+	// 解析选项参数
+	enableValidation := true
+	if val, ok := options["enable_validation"].(bool); ok {
+		enableValidation = val
+	}
+
+	enableBruteForce := true
+	if val, ok := options["enable_brute_force"].(bool); ok {
+		enableBruteForce = val
+	}
+
+	concurrency := 10
+	if val, ok := options["concurrency"].(int); ok {
+		concurrency = val
+	}
+
+	timeout := 60 * time.Second
+	if val, ok := options["timeout"].(time.Duration); ok {
+		timeout = val
+	}
+
+	var allResults []SubdomainResult
+	var allSubdomains []string
+
+	// 执行所有收集模块
+	logger.Infof("=== Running collection modules ===")
+	for i, step := range d.executionSteps {
+		// 跳过验证模块和爆破模块（如果禁用）
+		if step.Name == "Validation" {
+			logger.Debugf("Skipping validation step in library call")
+			continue
+		}
+
+		if step.Name == "Brute Force" && !enableBruteForce {
+			logger.Debugf("Skipping brute force step (disabled)")
+			continue
+		}
+
+		logger.Debugf("Processing step %d/%d: %s", i+1, len(d.executionSteps), step.Name)
+
+		if !step.Enabled {
+			logger.Debugf("Step %d (%s) is disabled, skipping", i+1, step.Name)
+			continue
+		}
+
+		logger.Infof("Step %d/%d: %s (Concurrency: %d, Timeout: %v)",
+			i+1, len(d.executionSteps), step.Name, concurrency, timeout)
+
+		// 获取当前步骤的模块
+		stepModules := d.getModulesForStep(step.Name, false)
+		if len(stepModules) == 0 {
+			logger.Debugf("No modules for step %s, skipping", step.Name)
+			continue
+		}
+
+		logger.Debugf("Step %s has %d modules to execute", step.Name, len(stepModules))
+
+		// 执行当前步骤
+		stepResults, err := d.runModulesWithConcurrency(stepModules, domain, concurrency, timeout, d.getModuleTypeForStep(step.Name) == ModuleTypeBrute)
+		if err != nil {
+			logger.Errorf("Step %s failed: %v", step.Name, err)
+			continue
+		}
+
+		// 转换为SubdomainResult结构
+		stepType := d.getModuleTypeForStep(step.Name)
+		for _, subdomain := range stepResults {
+			result := SubdomainResult{
+				Subdomain: subdomain,
+				Source:    string(stepType),
+				Time:      time.Now().Format("2006-01-02 15:04:05"),
+				Alive:     false, // 默认未检查存活状态
+			}
+			allResults = append(allResults, result)
+		}
+		allSubdomains = append(allSubdomains, stepResults...)
+
+		logger.Infof("Step %s completed, found %d subdomains (Total: %d)",
+			step.Name, len(stepResults), len(allSubdomains))
+	}
+
+	logger.Infof("=== Collection modules completed ===")
+	logger.Infof("Total subdomains collected: %d", len(allSubdomains))
+
+	// 执行验证模块（如果启用）
+	if enableValidation && len(allSubdomains) > 0 {
+		logger.Infof("=== Running validation module ===")
+		logger.Info("=== Starting domain validation and deduplication ===")
+
+		// 验证域名
+		validationResults := d.validator.ValidateDomains(allSubdomains, concurrency)
+
+		// 更新结果中的验证信息
+		for i, result := range allResults {
+			for _, validationResult := range validationResults {
+				if validationResult.Subdomain == result.Subdomain {
+					result.IP = validationResult.IP
+					result.Alive = validationResult.Alive
+					result.DNSResolved = validationResult.DNSResolved
+					result.PingAlive = validationResult.PingAlive
+					result.StatusCode = validationResult.StatusCode
+					result.StatusText = validationResult.StatusText
+					result.Provider = validationResult.Provider
+					allResults[i] = result
+					break
+				}
+			}
+		}
+
+		// 获取验证统计信息
+		stats := d.validator.GetValidationStats(validationResults)
+		logger.Infof("Validation completed: %d total, %d alive (%.1f%%), DNS: %d (%.1f%%), Ping: %d (%.1f%%)",
+			stats["total_domains"], stats["alive_domains"], stats["alive_percentage"],
+			stats["dns_resolved"], stats["dns_percentage"],
+			stats["ping_alive"], stats["ping_percentage"])
+	}
+
+	logger.Infof("Library call completed. Returning %d results", len(allResults))
+	return allResults, nil
 }
 
 // getModulesForStep 根据步骤名称获取对应的模块
