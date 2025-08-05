@@ -4,8 +4,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/oneforall-go/internal/alt"
+	brutepkg "github.com/oneforall-go/internal/brute"
+	"github.com/oneforall-go/internal/certificates"
+	"github.com/oneforall-go/internal/check"
 	"github.com/oneforall-go/internal/config"
 	"github.com/oneforall-go/internal/core"
+	"github.com/oneforall-go/internal/crawl"
+	"github.com/oneforall-go/internal/datasets"
+	"github.com/oneforall-go/internal/dnsquery"
+	"github.com/oneforall-go/internal/enrich"
+	"github.com/oneforall-go/internal/intelligence"
+	"github.com/oneforall-go/internal/search"
 	"github.com/oneforall-go/pkg/logger"
 )
 
@@ -225,53 +235,130 @@ func (api *OneForAllAPI) registerModules(options Options) {
 	}
 }
 
-// registerSearchModules 注册搜索模块
-func (api *OneForAllAPI) registerSearchModules() {
-	logger.Debug("Registering search modules...")
-	// 这里可以添加具体的搜索模块注册逻辑
+func (o *OneForAllAPI) registerSearchModules() {
+	// 基础搜索引擎
+	o.dispatcher.RegisterModule(search.NewGoogle(o.config))
+	o.dispatcher.RegisterModule(search.NewBing(o.config))
+	o.dispatcher.RegisterModule(search.NewBaidu(o.config))
+	o.dispatcher.RegisterModule(search.NewYahoo(o.config))
+	o.dispatcher.RegisterModule(search.NewAsk(o.config))
+	o.dispatcher.RegisterModule(search.NewSogou(o.config))
+	o.dispatcher.RegisterModule(search.NewYandex(o.config))
+	o.dispatcher.RegisterModule(search.NewGitee(o.config))
+	o.dispatcher.RegisterModule(search.NewSO(o.config))
+	o.dispatcher.RegisterModule(search.NewWZSearch(o.config))
+
+	// API 搜索引擎
+	o.dispatcher.RegisterModule(search.NewGitHub(o.config))
+	o.dispatcher.RegisterModule(search.NewShodan(o.config))
+	o.dispatcher.RegisterModule(search.NewFofa(o.config))
+	o.dispatcher.RegisterModule(search.NewHunter(o.config))
+	o.dispatcher.RegisterModule(search.NewQuake(o.config))
+	o.dispatcher.RegisterModule(search.NewZoomEye(o.config))
+	o.dispatcher.RegisterModule(search.NewBingAPI(o.config))
+	o.dispatcher.RegisterModule(search.NewGoogleAPI(o.config))
 }
 
 // registerDatasetModules 注册数据集模块
-func (api *OneForAllAPI) registerDatasetModules() {
-	logger.Debug("Registering dataset modules...")
-	// 这里可以添加具体的数据集模块注册逻辑
+func (o *OneForAllAPI) registerDatasetModules() {
+	o.dispatcher.RegisterModule(datasets.NewDNSDumpster(o.config))
+	o.dispatcher.RegisterModule(datasets.NewSecurityTrails(o.config))
+	o.dispatcher.RegisterModule(datasets.NewAnubis(o.config))
+	o.dispatcher.RegisterModule(datasets.NewBeVigil(o.config))
+	o.dispatcher.RegisterModule(datasets.NewBinaryEdge(o.config))
+	o.dispatcher.RegisterModule(datasets.NewChinaz(o.config))
+	o.dispatcher.RegisterModule(datasets.NewChinazAPI(o.config))
+	o.dispatcher.RegisterModule(datasets.NewCircl(o.config))
+	o.dispatcher.RegisterModule(datasets.NewCloudflare(o.config))
+	o.dispatcher.RegisterModule(datasets.NewDNSDB(o.config))
+	o.dispatcher.RegisterModule(datasets.NewDNSGrep(o.config))
+	o.dispatcher.RegisterModule(datasets.NewFullHunt(o.config))
+	o.dispatcher.RegisterModule(datasets.NewHackerTarget(o.config))
+	o.dispatcher.RegisterModule(datasets.NewIP138(o.config))
+	o.dispatcher.RegisterModule(datasets.NewIPv4Info(o.config))
+	o.dispatcher.RegisterModule(datasets.NewNetcraft(o.config))
+	o.dispatcher.RegisterModule(datasets.NewPassiveDNS(o.config))
+	o.dispatcher.RegisterModule(datasets.NewQianxun(o.config))
+	o.dispatcher.RegisterModule(datasets.NewRapidDNS(o.config))
+	o.dispatcher.RegisterModule(datasets.NewRiddler(o.config))
+	o.dispatcher.RegisterModule(datasets.NewRobtex(o.config))
+	o.dispatcher.RegisterModule(datasets.NewSiteDossier(o.config))
+	o.dispatcher.RegisterModule(datasets.NewSpyse(o.config))
+	o.dispatcher.RegisterModule(datasets.NewSublist3r(o.config))
+	o.dispatcher.RegisterModule(datasets.NewURLScan(o.config))
 }
 
 // registerCertificateModules 注册证书模块
-func (api *OneForAllAPI) registerCertificateModules() {
-	logger.Debug("Registering certificate modules...")
-	// 这里可以添加具体的证书模块注册逻辑
-}
-
-// registerCrawlModules 注册爬虫模块
-func (api *OneForAllAPI) registerCrawlModules() {
-	logger.Debug("Registering crawl modules...")
-	// 这里可以添加具体的爬虫模块注册逻辑
+func (o *OneForAllAPI) registerCertificateModules() {
+	o.dispatcher.RegisterModule(certificates.NewCensys(o.config))
+	o.dispatcher.RegisterModule(certificates.NewCertSpotter(o.config))
+	o.dispatcher.RegisterModule(certificates.NewCRTSh(o.config))
+	o.dispatcher.RegisterModule(certificates.NewGoogle(o.config))
+	o.dispatcher.RegisterModule(certificates.NewMySSL(o.config))
+	o.dispatcher.RegisterModule(certificates.NewRacent(o.config))
 }
 
 // registerCheckModules 注册检查模块
-func (api *OneForAllAPI) registerCheckModules() {
-	logger.Debug("Registering check modules...")
-	// 这里可以添加具体的检查模块注册逻辑
+func (o *OneForAllAPI) registerCheckModules() {
+	o.dispatcher.RegisterModule(check.NewAXFR(o.config))
+	o.dispatcher.RegisterModule(check.NewCDX(o.config))
+	o.dispatcher.RegisterModule(check.NewCert(o.config))
+	o.dispatcher.RegisterModule(check.NewCSP(o.config))
+	o.dispatcher.RegisterModule(check.NewNSEC(o.config))
+	o.dispatcher.RegisterModule(check.NewRobots(o.config))
+	o.dispatcher.RegisterModule(check.NewSitemap(o.config))
 }
 
-// registerIntelligenceModules 注册智能模块
-func (api *OneForAllAPI) registerIntelligenceModules() {
-	logger.Debug("Registering intelligence modules...")
-	// 这里可以添加具体的智能模块注册逻辑
+// registerCrawlModules 注册爬虫模块
+func (o *OneForAllAPI) registerCrawlModules() {
+	o.dispatcher.RegisterModule(crawl.NewArchive(o.config))
+	o.dispatcher.RegisterModule(crawl.NewCommonCrawl(o.config))
+}
+
+// registerDNSQueryModules 注册 DNS 查询模块
+func (o *OneForAllAPI) registerDNSQueryModules() {
+	o.dispatcher.RegisterModule(dnsquery.NewNS(o.config))
+	o.dispatcher.RegisterModule(dnsquery.NewMX(o.config))
+	o.dispatcher.RegisterModule(dnsquery.NewSOA(o.config))
+	o.dispatcher.RegisterModule(dnsquery.NewSPF(o.config))
+	o.dispatcher.RegisterModule(dnsquery.NewTXT(o.config))
+}
+
+// registerIntelligenceModules 注册情报模块
+func (o *OneForAllAPI) registerIntelligenceModules() {
+	o.dispatcher.RegisterModule(intelligence.NewAlienVault(o.config))
+	o.dispatcher.RegisterModule(intelligence.NewRiskIQ(o.config))
+	o.dispatcher.RegisterModule(intelligence.NewThreatBook(o.config))
+	o.dispatcher.RegisterModule(intelligence.NewThreatMiner(o.config))
+	o.dispatcher.RegisterModule(intelligence.NewVirusTotal(o.config))
+	o.dispatcher.RegisterModule(intelligence.NewVirusTotalAPI(o.config))
 }
 
 // registerBruteModules 注册爆破模块
-func (api *OneForAllAPI) registerBruteModules() {
-	logger.Debug("Registering brute force modules...")
-	// 这里可以添加具体的爆破模块注册逻辑
+func (o *OneForAllAPI) registerBruteModules() {
+	logger.Debugf("Registering brute force modules...")
+
+	// 注册爆破模块
+	bruteModule := brutepkg.NewBrute(o.config)
+	o.dispatcher.RegisterModule(bruteModule)
+	logger.Infof("Registered brute force module: %s", bruteModule.Name())
+
+	// 注册alt模块
+	altModule := alt.NewAlt(o.config)
+	o.dispatcher.RegisterModule(altModule)
+	logger.Infof("Registered alt module: %s", altModule.Name())
+
+	logger.Debugf("Brute force modules registration completed")
 }
 
 // registerEnrichModules 注册丰富模块
-func (api *OneForAllAPI) registerEnrichModules() {
-	logger.Debug("Registering enrich modules...")
-	// 这里可以添加具体的丰富模块注册逻辑
+func (o *OneForAllAPI) registerEnrichModules() {
+	// 注册enrich模块
+	enrichModule := enrich.NewEnrich(o.config)
+	o.dispatcher.RegisterModule(enrichModule)
 }
+
+// processResults 处理结果
 
 // GetDefaultOptions 获取默认配置选项
 func GetDefaultOptions() Options {
