@@ -41,6 +41,8 @@ type Config struct {
 	ResultSaveFormat  string `mapstructure:"result_save_format"`
 	ResultSavePath    string `mapstructure:"result_save_path"`
 	ResultExportAlive bool   `mapstructure:"result_export_alive"`
+	// 结果后处理阈值
+	ResultCheckLimit int `mapstructure:"result_check_limit"`
 
 	// HTTP配置
 	HTTPRequestPort string `mapstructure:"http_request_port"`
@@ -183,6 +185,7 @@ func setDefaults(cfg *Config) {
 	cfg.ResultSaveFormat = "csv"
 	cfg.ResultSavePath = "results"
 	cfg.ResultExportAlive = true
+	cfg.ResultCheckLimit = 30
 
 	// HTTP配置
 	cfg.HTTPRequestPort = "80,443"
@@ -333,6 +336,9 @@ func loadFromEnv(cfg *Config) {
 	}
 	if val := getEnvBool("RESULT_EXPORT_ALIVE"); val != nil {
 		cfg.ResultExportAlive = *val
+	}
+	if val := getEnvInt("RESULT_CHECK_LIMIT"); val != nil {
+		cfg.ResultCheckLimit = *val
 	}
 
 	// HTTP配置

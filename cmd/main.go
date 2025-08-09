@@ -395,17 +395,27 @@ func (o *OneForAll) registerEnrichModules() {
 
 // processResults 处理结果
 func (o *OneForAll) processResults(domain string, results map[core.ModuleType][]core.SubdomainResult, validationResults []validator.ValidationResult) {
-	// 首先添加验证结果
+	// 汇总主机列表
+	var hosts []string
+	for _, subdomainResults := range results {
+		for _, r := range subdomainResults {
+			hosts = append(hosts, r.Subdomain)
+		}
+	}
+	// 后处理：当数量超过阈值时，按标题去重并对403限流
+	if processed := core.PostProcessHosts(hosts, o.config); processed != nil {
+		logger.Infof("Post-processed %d hosts for %s", len(hosts), domain)
+		o.output.AddResults(processed)
+		return
+	}
+
+	// 否则走原流程：先添加验证结果，再添加其他模块
 	if len(validationResults) > 0 {
 		logger.Infof("Adding %d validation results for %s", len(validationResults), domain)
 		o.output.AddValidationResults(validationResults)
 	}
-
-	// 然后添加其他模块的结果
 	for moduleType, subdomainResults := range results {
 		logger.Infof("Module type %s found %d subdomains for %s", moduleType, len(subdomainResults), domain)
-
-		// 直接添加SubdomainResult结构
 		for _, result := range subdomainResults {
 			o.output.AddResult(result)
 		}

@@ -459,6 +459,10 @@ func (d *Dispatcher) RunLib(domain string, options map[string]interface{}) ([]Su
 			stats["ping_alive"], stats["ping_percentage"])
 	}
 
+	// 后处理：当结果数量超过阈值时，按标题去重并对403限流
+	if processed := PostProcessHosts(extractHostsFromResults(allResults), d.config); processed != nil {
+		allResults = processed
+	}
 	logger.Infof("Library call completed. Returning %d results", len(allResults))
 	return allResults, nil
 }
@@ -902,4 +906,12 @@ func (d *Dispatcher) SetStepTimeout(stepIndex int, timeout time.Duration) {
 	if stepIndex >= 0 && stepIndex < len(d.executionSteps) {
 		d.executionSteps[stepIndex].Timeout = timeout
 	}
+}
+
+func extractHostsFromResults(results []SubdomainResult) []string {
+	var hosts []string
+	for _, r := range results {
+		hosts = append(hosts, r.Subdomain)
+	}
+	return hosts
 }
